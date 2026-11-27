@@ -13,6 +13,10 @@
     $since = $stats->since();
     $fmt = fn ($n) => number_format((int) $n, 0, ',', ' ');
     $labelEvery = max(1, (int) ceil($series->count() / 6));
+    $accent = preg_match('/^#[0-9a-fA-F]{6}$/', (string) config('stats.accent')) ? config('stats.accent') : '#4f46e5';
+    [$r, $g, $b] = sscanf($accent, '#%02x%02x%02x');
+    $light = (0.2126 * $r + 0.7152 * $g + 0.0722 * $b) / 255 > 0.6; // couleur claire : barres plus marquées
+    $uid = 'lstats-'.\Illuminate\Support\Str::random(8);
     // Historique Plausible : provenance, pages et appareils ne sont connus qu'en total sur toute la période
     $emptyText = $stats->period !== 'tout' && $totals['visitors'] > 0 && \Illuminate\Support\Facades\DB::table('stats_daily')->where('origin', 'plausible')->exists()
         ? "Pas de détail sur cette période : l'historique repris de Plausible n'a que des totaux, visibles dans « Depuis le début »."
@@ -27,7 +31,7 @@
         && \Illuminate\Support\Facades\DB::table('stats_daily')->where('origin', 'plausible')->exists();
 @endphp
 
-<div class="lstats" style="--lstats-accent: {{ preg_match('/^#[0-9a-fA-F]{3,8}$/', (string) config('stats.accent')) ? config('stats.accent') : '#4f46e5' }}">
+<div class="lstats" id="{{ $uid }}" style="--lstats-accent: {{ $accent }}; --lstats-bar: {{ $light ? '.38' : '.10' }}; --lstats-fill: {{ $light ? '.45' : '.22' }}">
     <style>
         .lstats { --lstats-text:#111827; --lstats-muted:#6b7280; --lstats-line:#e5e7eb; --lstats-bg:#ffffff; --lstats-soft:#f9fafb;
             color:var(--lstats-text); font-family:inherit; font-size:14px; line-height:1.4; }
@@ -47,12 +51,18 @@
         .lstats .ls-chart .ls-grid { stroke:var(--lstats-line); stroke-width:1; }
         .lstats .ls-chart text { fill:var(--lstats-muted); font-size:13px; }
         .lstats .ls-hit:hover + .ls-dot { opacity:1; }
-        .lstats .ls-dot { opacity:0; transition:opacity .1s; }
+        .lstats .ls-dot { opacity:0; transition:opacity .1s; pointer-events:none; }
+        .lstats .ls-chart { position:relative; }
+        .lstats .ls-guide { stroke:var(--lstats-muted); stroke-width:1.5; stroke-dasharray:4 4; opacity:0; pointer-events:none; }
+        .lstats .ls-tip { position:absolute; z-index:5; pointer-events:none; opacity:0; transform:translate(-50%, -100%); margin-top:-12px;
+            background:#111827; color:#fff; border-radius:10px; padding:8px 12px; font-size:13px; white-space:nowrap; box-shadow:0 4px 12px rgba(0,0,0,.18); transition:opacity .1s; }
+        .lstats .ls-tip strong { display:block; font-size:12px; font-weight:500; color:#d1d5db; margin-bottom:2px; }
+        .lstats .ls-tip.is-visible { opacity:1; }
         .lstats .ls-cols { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; margin-top:16px; }
         .lstats .ls-card-title { display:flex; justify-content:space-between; font-weight:600; margin-bottom:12px; }
         .lstats .ls-card-title span { color:var(--lstats-muted); font-weight:500; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
         .lstats .ls-row { position:relative; display:flex; justify-content:space-between; gap:12px; padding:7px 10px; margin-bottom:4px; border-radius:8px; overflow:hidden; }
-        .lstats .ls-bar { position:absolute; inset:0 auto 0 0; background:var(--lstats-accent); opacity:.10; border-radius:8px; }
+        .lstats .ls-bar { position:absolute; inset:0 auto 0 0; background:var(--lstats-accent); opacity:var(--lstats-bar); border-radius:8px; }
         .lstats .ls-row-name { position:relative; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .lstats .ls-row-value { position:relative; font-weight:600; font-variant-numeric:tabular-nums; }
         .lstats .ls-devices { display:flex; height:10px; border-radius:9999px; overflow:hidden; background:var(--lstats-soft); margin:6px 0 14px; }
@@ -92,8 +102,8 @@
         <div class="ls-card-title">Visiteurs {{ $monthly ? 'par mois' : 'par jour' }}</div>
         <svg viewBox="-60 0 1080 {{ \VinVui\Stats\Support\Chart::HEIGHT + 20 }}" role="img" aria-label="Courbe des visiteurs">
             <defs>
-                <linearGradient id="lstats-fill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0" stop-color="var(--lstats-accent)" stop-opacity=".22"/>
+                <linearGradient id="{{ $uid }}-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0" stop-color="var(--lstats-accent)" stop-opacity="var(--lstats-fill)"/>
                     <stop offset="1" stop-color="var(--lstats-accent)" stop-opacity="0"/>
                 </linearGradient>
             </defs>
@@ -101,19 +111,22 @@
                 <line class="ls-grid" x1="0" x2="{{ \VinVui\Stats\Support\Chart::WIDTH }}" y1="{{ $y }}" y2="{{ $y }}"/>
                 <text x="-14" y="{{ $y + 7 }}" text-anchor="end">{{ $fmt($value) }}</text>
             @endforeach
-            <path d="{{ $chart->area() }}" fill="url(#lstats-fill)"/>
+            <path d="{{ $chart->area() }}" fill="url(#{{ $uid }}-fill)"/>
+            <line class="ls-guide" x1="0" x2="0" y1="0" y2="{{ $chart->baseline() }}"/>
             <path d="{{ $chart->line() }}" fill="none" stroke="var(--lstats-accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
             @foreach ($series->values() as $i => $point)
                 @php [$x, $y] = $coords[$i]; $w = \VinVui\Stats\Support\Chart::WIDTH / max(1, $series->count() - 1); @endphp
-                <rect class="ls-hit" x="{{ $x - $w / 2 }}" y="0" width="{{ $w }}" height="{{ $chart->baseline() }}" fill="transparent">
-                    <title>{{ $monthly ? ucfirst($point['date']->translatedFormat('F Y')) : ucfirst($point['date']->translatedFormat('l j F')) }} : {{ $fmt($point['visitors']) }} visiteur{{ $point['visitors'] > 1 ? 's' : '' }}, {{ $fmt($point['pageviews']) }} page{{ $point['pageviews'] > 1 ? 's' : '' }} vue{{ $point['pageviews'] > 1 ? 's' : '' }}</title>
-                </rect>
+                <rect class="ls-hit" x="{{ $x - $w / 2 }}" y="0" width="{{ $w }}" height="{{ $chart->baseline() }}" fill="transparent"
+                    data-x="{{ $x }}" data-y="{{ $y }}"
+                    data-label="{{ $monthly ? ucfirst($point['date']->translatedFormat('F Y')) : ucfirst($point['date']->translatedFormat('l j F')) }}"
+                    data-value="{{ $fmt($point['visitors']) }} visiteur{{ $point['visitors'] > 1 ? 's' : '' }} · {{ $fmt($point['pageviews']) }} page{{ $point['pageviews'] > 1 ? 's' : '' }} vue{{ $point['pageviews'] > 1 ? 's' : '' }}"></rect>
                 <circle class="ls-dot" cx="{{ $x }}" cy="{{ $y }}" r="6" fill="var(--lstats-accent)" stroke="#fff" stroke-width="2"/>
                 @if (($i % $labelEvery === 0 && $series->count() - 1 - $i >= $labelEvery / 2) || $i === $series->count() - 1)
                     <text x="{{ $x }}" y="{{ $chart->baseline() + 34 }}" text-anchor="{{ $i === 0 ? 'start' : ($i === $series->count() - 1 ? 'end' : 'middle') }}">{{ $monthly ? $point['date']->translatedFormat('M Y') : $point['date']->translatedFormat('j M') }}</text>
                 @endif
             @endforeach
         </svg>
+        <div class="ls-tip" role="status"><strong></strong><span></span></div>
     </div>
 
     <div class="ls-cols">
@@ -161,4 +174,28 @@
         Visites comptées sans cookie ni donnée personnelle ; un visiteur est compté une fois par jour.
         @if ($since) Données depuis le {{ $since }}. @endif
     </p>
+
+    <script>
+        (function () {
+            var root = document.getElementById(@json($uid));
+            if (!root) return;
+            var card = root.querySelector('.ls-chart'), svg = card.querySelector('svg');
+            var tip = card.querySelector('.ls-tip'), guide = card.querySelector('.ls-guide');
+            root.querySelectorAll('.ls-hit').forEach(function (hit) {
+                hit.addEventListener('mouseenter', function () {
+                    var x = parseFloat(hit.dataset.x), y = parseFloat(hit.dataset.y);
+                    guide.setAttribute('x1', x); guide.setAttribute('x2', x); guide.style.opacity = 1;
+                    var pt = svg.createSVGPoint(); pt.x = x; pt.y = y;
+                    var screen = pt.matrixTransform(svg.getScreenCTM());
+                    var box = card.getBoundingClientRect();
+                    var left = Math.min(Math.max(screen.x - box.left, 90), box.width - 90);
+                    tip.style.left = left + 'px'; tip.style.top = (screen.y - box.top) + 'px';
+                    tip.querySelector('strong').textContent = hit.dataset.label;
+                    tip.querySelector('span').textContent = hit.dataset.value;
+                    tip.classList.add('is-visible');
+                });
+            });
+            svg.addEventListener('mouseleave', function () { tip.classList.remove('is-visible'); guide.style.opacity = 0; });
+        })();
+    </script>
 </div>
