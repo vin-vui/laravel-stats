@@ -147,6 +147,7 @@ class Stats
         // Visite sans provenance = accès direct (lien tapé, favori, application…)
         $rawName = $rawColumn === 'source' ? "COALESCE(source, '".self::DIRECT."')" : $rawColumn;
         $raw = DB::table('stats_visits')->whereBetween('day', [$from, $to])->whereNotIn('day', $done)
+            ->when($rawColumn === 'source', fn ($q) => $q->where(fn ($w) => $w->whereNull('source')->orWhere('source', '<>', '')))
             ->groupBy(DB::raw($rawName))
             ->get([DB::raw("$rawName as name"), DB::raw("$rawMetric as total")]);
 

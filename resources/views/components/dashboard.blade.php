@@ -15,7 +15,7 @@
     $labelEvery = max(1, (int) ceil($series->count() / 6));
 @endphp
 
-<div class="lstats" style="--lstats-accent: {{ config('stats.accent', '#4f46e5') }}">
+<div class="lstats" style="--lstats-accent: {{ preg_match('/^#[0-9a-fA-F]{3,8}$/', (string) config('stats.accent')) ? config('stats.accent') : '#4f46e5' }}">
     <style>
         .lstats { --lstats-text:#111827; --lstats-muted:#6b7280; --lstats-line:#e5e7eb; --lstats-bg:#ffffff; --lstats-soft:#f9fafb;
             color:var(--lstats-text); font-family:inherit; font-size:14px; line-height:1.4; }

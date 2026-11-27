@@ -16,6 +16,6 @@ return [
     // Nombre de jours de visites brutes conservées après agrégation (0 = suppression immédiate).
     'keep_raw_days' => 2,
 
-    // Couleur principale du tableau de bord.
+    // Couleur principale du tableau de bord. Dans le .env, mettre la valeur entre guillemets : STATS_ACCENT="#059669" (sinon # démarre un commentaire).
     'accent' => env('STATS_ACCENT', '#4f46e5'),
 ];
