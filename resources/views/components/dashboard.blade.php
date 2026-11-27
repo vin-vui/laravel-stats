@@ -17,6 +17,14 @@
     $emptyText = $stats->period !== 'tout' && $totals['visitors'] > 0 && \Illuminate\Support\Facades\DB::table('stats_daily')->where('origin', 'plausible')->exists()
         ? "Pas de détail sur cette période : l'historique repris de Plausible n'a que des totaux, visibles dans « Depuis le début »."
         : 'Pas encore de données.';
+    // Période à cheval sur l'historique importé : le détail ne couvre que les jours comptés par le site
+    $siteSince = collect([
+        \Illuminate\Support\Facades\DB::table('stats_daily')->where('origin', 'site')->min('day'),
+        \Illuminate\Support\Facades\DB::table('stats_visits')->min('day'),
+    ])->filter()->min();
+    [$rangeStart] = $stats->range();
+    $partialDetail = $stats->period !== 'tout' && $siteSince && $rangeStart->lt(\Carbon\CarbonImmutable::parse($siteSince))
+        && \Illuminate\Support\Facades\DB::table('stats_daily')->where('origin', 'plausible')->exists();
 @endphp
 
 <div class="lstats" style="--lstats-accent: {{ preg_match('/^#[0-9a-fA-F]{3,8}$/', (string) config('stats.accent')) ? config('stats.accent') : '#4f46e5' }}">
@@ -144,6 +152,10 @@
             @endif
         </div>
     </div>
+
+    @if ($partialDetail)
+        <p class="ls-foot" style="margin-top:10px">Provenance, pages et appareils : comptés par le site depuis le {{ \Carbon\CarbonImmutable::parse($siteSince)->translatedFormat('j F Y') }} ; pour la période précédente, voir « Depuis le début ».</p>
+    @endif
 
     <p class="ls-foot">
         Visites comptées sans cookie ni donnée personnelle ; un visiteur est compté une fois par jour.
