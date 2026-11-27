@@ -13,6 +13,10 @@
     $since = $stats->since();
     $fmt = fn ($n) => number_format((int) $n, 0, ',', ' ');
     $labelEvery = max(1, (int) ceil($series->count() / 6));
+    // Historique Plausible : provenance, pages et appareils ne sont connus qu'en total sur toute la période
+    $emptyText = $stats->period !== 'tout' && $totals['visitors'] > 0 && \Illuminate\Support\Facades\DB::table('stats_daily')->where('origin', 'plausible')->exists()
+        ? "Pas de détail sur cette période : l'historique repris de Plausible n'a que des totaux, visibles dans « Depuis le début »."
+        : 'Pas encore de données.';
 @endphp
 
 <div class="lstats" style="--lstats-accent: {{ preg_match('/^#[0-9a-fA-F]{3,8}$/', (string) config('stats.accent')) ? config('stats.accent') : '#4f46e5' }}">
@@ -97,7 +101,7 @@
                     <title>{{ $monthly ? ucfirst($point['date']->translatedFormat('F Y')) : ucfirst($point['date']->translatedFormat('l j F')) }} : {{ $fmt($point['visitors']) }} visiteur{{ $point['visitors'] > 1 ? 's' : '' }}, {{ $fmt($point['pageviews']) }} page{{ $point['pageviews'] > 1 ? 's' : '' }} vue{{ $point['pageviews'] > 1 ? 's' : '' }}</title>
                 </rect>
                 <circle class="ls-dot" cx="{{ $x }}" cy="{{ $y }}" r="6" fill="var(--lstats-accent)" stroke="#fff" stroke-width="2"/>
-                @if ($i % $labelEvery === 0 || $i === $series->count() - 1)
+                @if (($i % $labelEvery === 0 && $series->count() - 1 - $i >= $labelEvery / 2) || $i === $series->count() - 1)
                     <text x="{{ $x }}" y="{{ $chart->baseline() + 34 }}" text-anchor="{{ $i === 0 ? 'start' : ($i === $series->count() - 1 ? 'end' : 'middle') }}">{{ $monthly ? $point['date']->translatedFormat('M Y') : $point['date']->translatedFormat('j M') }}</text>
                 @endif
             @endforeach
@@ -111,7 +115,7 @@
                 <div class="ls-row"><div class="ls-bar" style="width: {{ round($row['share'] * 100, 1) }}%"></div>
                     <div class="ls-row-name">{{ $row['name'] }}</div><div class="ls-row-value">{{ $fmt($row['total']) }}</div></div>
             @empty
-                <div class="ls-empty">Pas encore de données.</div>
+                <div class="ls-empty">{{ $emptyText }}</div>
             @endforelse
         </div>
 
@@ -121,12 +125,12 @@
                 <div class="ls-row"><div class="ls-bar" style="width: {{ round($row['share'] * 100, 1) }}%"></div>
                     <div class="ls-row-name" title="{{ $row['name'] }}">{{ $row['name'] }}</div><div class="ls-row-value">{{ $fmt($row['total']) }}</div></div>
             @empty
-                <div class="ls-empty">Pas encore de données.</div>
+                <div class="ls-empty">{{ $emptyText }}</div>
             @endforelse
 
             <div class="ls-card-title" style="margin-top:18px">Appareils <span>Part des visiteurs</span></div>
             @if ($devices->isEmpty())
-                <div class="ls-empty">Pas encore de données.</div>
+                <div class="ls-empty">{{ $emptyText }}</div>
             @else
                 <div class="ls-devices">
                     @foreach ($devices as $i => $row)

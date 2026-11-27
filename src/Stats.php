@@ -16,6 +16,7 @@ class Stats
         '7j' => ['label' => '7 jours', 'days' => 7, 'unit' => 'day'],
         '30j' => ['label' => '30 jours', 'days' => 30, 'unit' => 'day'],
         '12m' => ['label' => '12 mois', 'days' => 365, 'unit' => 'month'],
+        'tout' => ['label' => 'Depuis le début', 'days' => null, 'unit' => 'month'],
     ];
 
     public const DIRECT = 'Accès direct';
@@ -33,6 +34,14 @@ class Stats
     {
         $today = CarbonImmutable::today();
         $conf = self::PERIODS[$this->period];
+
+        if ($this->period === 'tout') {
+            $first = DB::table('stats_daily')->min('day') ?? DB::table('stats_visits')->min('day');
+            $start = $first ? CarbonImmutable::parse($first)->startOfMonth() : $today->subMonths(11)->startOfMonth();
+
+            return [min($start, $today->startOfMonth()), $today];
+        }
+
         $start = $conf['unit'] === 'month'
             ? $today->subMonths(11)->startOfMonth()
             : $today->subDays($conf['days'] - 1);
@@ -46,7 +55,8 @@ class Stats
         [$start, $end] = $this->range();
         $days = $start->diffInDays($end) + 1;
         $current = $this->sumDaily($start, $end);
-        $previous = $this->sumDaily($start->subDays($days), $start->subDay());
+        // Pas de « période précédente » pour l'historique complet
+        $previous = $this->period === 'tout' ? ['visitors' => 0, 'pageviews' => 0] : $this->sumDaily($start->subDays($days), $start->subDay());
 
         $variation = fn ($now, $before) => $before > 0 ? (int) round(($now - $before) * 100 / $before) : null;
 
