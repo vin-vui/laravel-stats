@@ -49,7 +49,7 @@
         .lstats .ls-up { color:#047857; background:#ecfdf5; } .lstats .ls-down { color:#b91c1c; background:#fef2f2; }
         .lstats .ls-chart svg { display:block; width:100%; height:auto; overflow:visible; }
         .lstats .ls-chart .ls-grid { stroke:var(--lstats-line); stroke-width:1; }
-        .lstats .ls-chart text { fill:var(--lstats-muted); font-size:13px; }
+        .lstats .ls-chart text { fill:var(--lstats-muted); font-size:15px; }
         .lstats .ls-hit:hover + .ls-dot { opacity:1; }
         .lstats .ls-dot { opacity:0; transition:opacity .1s; pointer-events:none; }
         .lstats .ls-chart { position:relative; }
@@ -118,11 +118,11 @@
                 @php [$x, $y] = $coords[$i]; $w = \VinVui\Stats\Support\Chart::WIDTH / max(1, $series->count() - 1); @endphp
                 <rect class="ls-hit" x="{{ $x - $w / 2 }}" y="0" width="{{ $w }}" height="{{ $chart->baseline() }}" fill="transparent"
                     data-x="{{ $x }}" data-y="{{ $y }}"
-                    data-label="{{ $monthly ? ucfirst($point['date']->translatedFormat('F Y')) : ucfirst($point['date']->translatedFormat('l j F')) }}"
+                    data-label="{{ $monthly ? ucfirst($point['date']->locale(config('stats.locale', 'fr'))->translatedFormat('F Y')) : ucfirst($point['date']->locale(config('stats.locale', 'fr'))->translatedFormat('l j F')) }}"
                     data-value="{{ $fmt($point['visitors']) }} visiteur{{ $point['visitors'] > 1 ? 's' : '' }} · {{ $fmt($point['pageviews']) }} page{{ $point['pageviews'] > 1 ? 's' : '' }} vue{{ $point['pageviews'] > 1 ? 's' : '' }}"></rect>
                 <circle class="ls-dot" cx="{{ $x }}" cy="{{ $y }}" r="6" fill="var(--lstats-accent)" stroke="#fff" stroke-width="2"/>
                 @if (($i % $labelEvery === 0 && $series->count() - 1 - $i >= $labelEvery / 2) || $i === $series->count() - 1)
-                    <text x="{{ $x }}" y="{{ $chart->baseline() + 34 }}" text-anchor="{{ $i === 0 ? 'start' : ($i === $series->count() - 1 ? 'end' : 'middle') }}">{{ $monthly ? $point['date']->translatedFormat('M Y') : $point['date']->translatedFormat('j M') }}</text>
+                    <text x="{{ $x }}" y="{{ $chart->baseline() + 34 }}" text-anchor="{{ $i === 0 ? 'start' : ($i === $series->count() - 1 ? 'end' : 'middle') }}">{{ $monthly ? $point['date']->locale(config('stats.locale', 'fr'))->translatedFormat('M Y') : $point['date']->locale(config('stats.locale', 'fr'))->translatedFormat('j M') }}</text>
                 @endif
             @endforeach
         </svg>
@@ -167,7 +167,7 @@
     </div>
 
     @if ($partialDetail)
-        <p class="ls-foot" style="margin-top:10px">Provenance, pages et appareils : comptés par le site depuis le {{ \Carbon\CarbonImmutable::parse($siteSince)->translatedFormat('j F Y') }} ; pour la période précédente, voir « Depuis le début ».</p>
+        <p class="ls-foot" style="margin-top:10px">Provenance, pages et appareils : comptés par le site depuis le {{ \Carbon\CarbonImmutable::parse($siteSince)->locale(config('stats.locale', 'fr'))->translatedFormat('j F Y') }} ; pour la période précédente, voir « Depuis le début ».</p>
     @endif
 
     <p class="ls-foot">

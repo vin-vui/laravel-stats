@@ -13,6 +13,9 @@ return [
         'storage/*', 'uploads/*', 'build/*', 'vendor/*',
     ],
 
+    // Langue des dates du tableau de bord, indépendante de la langue du site.
+    'locale' => 'fr',
+
     // Nombre de jours de visites brutes conservées après agrégation (0 = suppression immédiate).
     'keep_raw_days' => 2,
 

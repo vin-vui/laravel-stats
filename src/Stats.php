@@ -110,7 +110,7 @@ class Stats
     {
         $first = DB::table('stats_daily')->min('day') ?? DB::table('stats_visits')->min('day');
 
-        return $first ? CarbonImmutable::parse($first)->translatedFormat('j F Y') : null;
+        return $first ? CarbonImmutable::parse($first)->locale(config('stats.locale', 'fr'))->translatedFormat('j F Y') : null;
     }
 
     // --- Interne
