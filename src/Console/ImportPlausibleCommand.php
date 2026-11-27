@@ -39,7 +39,10 @@ class ImportPlausibleCommand extends Command
 
         $months = $this->rows($all['visitors.csv']); // date = 1er du mois
         $daily = isset($days['visitors.csv']) ? $this->rows($days['visitors.csv']) : [];
-        $siteDays = DB::table('stats_daily')->where('origin', 'site')->pluck('day')->map(fn ($d) => (string) $d)->flip();
+        // Jours déjà comptés par le site (regroupés ou encore bruts) : jamais écrasés
+        $siteDays = DB::table('stats_daily')->where('origin', 'site')->pluck('day')
+            ->concat(DB::table('stats_visits')->distinct()->pluck('day'))
+            ->map(fn ($d) => (string) $d)->flip();
 
         DB::transaction(function () use ($months, $daily, $all, $siteDays) {
             // 1. Effacer un import précédent

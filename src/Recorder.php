@@ -47,6 +47,10 @@ class Recorder
         if (preg_match(self::BOT_PATTERN, (string) $request->userAgent())) {
             return false;
         }
+        // Les vrais navigateurs envoient toujours leur langue ; la plupart des robots non déclarés, non
+        if (! $request->hasHeader('Accept-Language')) {
+            return false;
+        }
         $path = ltrim($request->path(), '/');
         foreach ((array) config('stats.ignore_paths', []) as $pattern) {
             if (Str::is($pattern, $path)) {
