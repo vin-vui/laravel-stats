@@ -8,6 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Relançable : les tables peuvent déjà exister si la table « migrations » a été
+        // remplacée par l'import d'une sauvegarde (bascule de serveur, par exemple)
+        if (Schema::hasTable('stats_visits')) {
+            return;
+        }
+
         // Visites brutes : une ligne par page vue, regroupées chaque nuit puis supprimées.
         Schema::create('stats_visits', function (Blueprint $table) {
             $table->id();

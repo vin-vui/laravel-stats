@@ -29,12 +29,21 @@ class Recorder
         if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
             return false;
         }
-        if (! str_contains((string) $response->headers->get('Content-Type'), 'text/html')) {
-            return false;
+        if ($request->prefetch()) {
+            return false; // préchargement : la page n'a pas (encore) été vue
         }
-        // Navigation Livewire / Inertia / requêtes JavaScript : pas une nouvelle page
-        if ($request->ajax() || $request->hasHeader('X-Livewire') || $request->hasHeader('X-Inertia') || $request->prefetch()) {
-            return false;
+        // Navigation Inertia (sites en Vue) : chaque changement de page est une requête JSON,
+        // à compter comme une page vue, sauf les rechargements partiels de données
+        $inertiaPage = $request->hasHeader('X-Inertia') && ! $request->hasHeader('X-Inertia-Partial-Data')
+            && ! $request->hasHeader('X-Inertia-Partial-Component');
+        if (! $inertiaPage) {
+            if (! str_contains((string) $response->headers->get('Content-Type'), 'text/html')) {
+                return false;
+            }
+            // Requêtes Livewire, Inertia partielles ou JavaScript : pas une nouvelle page
+            if ($request->ajax() || $request->hasHeader('X-Livewire') || $request->hasHeader('X-Inertia')) {
+                return false;
+            }
         }
         // Les personnes connectées sont les administrateurs du site
         if ($request->user()) {
