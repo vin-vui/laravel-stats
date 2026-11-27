@@ -1,0 +1,25 @@
+{
+    "name": "vin-vui/laravel-stats",
+    "description": "Statistiques de visites maison pour les sites Laravel : sans cookie, tableau de bord dans l'admin.",
+    "type": "library",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "illuminate/support": "^11.0|^12.0|^13.0",
+        "illuminate/database": "^11.0|^12.0|^13.0",
+        "illuminate/console": "^11.0|^12.0|^13.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "VinVui\\Stats\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "VinVui\\Stats\\StatsServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}
